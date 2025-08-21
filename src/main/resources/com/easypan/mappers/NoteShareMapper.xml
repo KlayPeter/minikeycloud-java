@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easypan.mappers.NoteShareMapper">
+
+    <!--实体映射-->
+    <resultMap id="base_result_map" type="com.easypan.entity.po.NoteShare">
+        <!--分享ID-->
+        <result column="share_id" property="shareId"/>
+        <!--笔记ID-->
+        <result column="note_id" property="noteId"/>
+        <!--用户ID-->
+        <result column="user_id" property="userId"/>
+        <!--分享标题-->
+        <result column="share_title" property="shareTitle"/>
+        <!--有效期类型 0:1天 1:7天 2:30天 3:永久有效-->
+        <result column="valid_type" property="validType"/>
+        <!--失效时间-->
+        <result column="expire_time" property="expireTime"/>
+        <!--分享时间-->
+        <result column="share_time" property="shareTime"/>
+        <!--提取码-->
+        <result column="code" property="code"/>
+        <!--浏览次数-->
+        <result column="show_count" property="showCount"/>
+        <!--状态 0:删除 1:正常-->
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <!-- 通用查询结果列-->
+    <sql id="base_column_list">
+        share_id,note_id,user_id,share_title,valid_type,
+		 expire_time,share_time,code,show_count,status
+    </sql>
+
+    <sql id="base_condition_filed">
+        <if test="query.shareId != null and query.shareId!=''">
+            and share_id = #{query.shareId}
+        </if>
+        <if test="query.noteId != null and query.noteId!=''">
+            and note_id = #{query.noteId}
+        </if>
+        <if test="query.userId != null and query.userId!=''">
+            and user_id = #{query.userId}
+        </if>
+        <if test="query.shareTitle != null and query.shareTitle!=''">
+            and share_title = #{query.shareTitle}
+        </if>
+        <if test="query.shareTitleFuzzy != null and query.shareTitleFuzzy!=''">
+            and share_title like concat('%', #{query.shareTitleFuzzy}, '%')
+        </if>
+        <if test="query.validType != null">
+            and valid_type = #{query.validType}
+        </if>
+        <if test="query.expireTime != null and query.expireTime!=''">
+            <![CDATA[ and  expire_time=str_to_date(#{query.expireTime}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.expireTimeStart != null and query.expireTimeStart!=''">
+            <![CDATA[ and  expire_time>=str_to_date(#{query.expireTimeStart}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.expireTimeEnd != null and query.expireTimeEnd!=''">
+            <![CDATA[ and  expire_time< date_sub(str_to_date(#{query.expireTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+        </if>
+        <if test="query.shareTime != null and query.shareTime!=''">
+            <![CDATA[ and  share_time=str_to_date(#{query.shareTime}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.shareTimeStart != null and query.shareTimeStart!=''">
+            <![CDATA[ and  share_time>=str_to_date(#{query.shareTimeStart}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.shareTimeEnd != null and query.shareTimeEnd!=''">
+            <![CDATA[ and  share_time< date_sub(str_to_date(#{query.shareTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+        </if>
+        <if test="query.status != null">
+            and status = #{query.status}
+        </if>
+        <if test="query.shareIdArray != null and query.shareIdArray.length > 0">
+            and share_id in
+            <foreach collection="query.shareIdArray" item="item" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </sql>
+
+    <!-- 查询集合-->
+    <select id="selectList" resultMap="base_result_map">
+        SELECT
+        <include refid="base_column_list"/>
+        FROM note_share
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+        <if test="query.orderBy!=null">
+            order by ${query.orderBy}
+        </if>
+        <if test="query.simplePage!=null">
+            limit #{query.simplePage.start},#{query.simplePage.end}
+        </if>
+    </select>
+
+    <!-- 查询数量-->
+    <select id="selectCount" resultType="java.lang.Integer">
+        SELECT count(1) FROM note_share
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+    </select>
+
+    <!-- 插入 （匹配有值的字段）-->
+    <insert id="insert" parameterType="com.easypan.entity.po.NoteShare">
+        INSERT INTO note_share
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bean.shareId != null">
+                share_id,
+            </if>
+            <if test="bean.noteId != null">
+                note_id,
+            </if>
+            <if test="bean.userId != null">
+                user_id,
+            </if>
+            <if test="bean.shareTitle != null">
+                share_title,
+            </if>
+            <if test="bean.validType != null">
+                valid_type,
+            </if>
+            <if test="bean.expireTime != null">
+                expire_time,
+            </if>
+            <if test="bean.shareTime != null">
+                share_time,
+            </if>
+            <if test="bean.code != null">
+                code,
+            </if>
+            <if test="bean.showCount != null">
+                show_count,
+            </if>
+            <if test="bean.status != null">
+                status,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bean.shareId != null">
+                #{bean.shareId},
+            </if>
+            <if test="bean.noteId != null">
+                #{bean.noteId},
+            </if>
+            <if test="bean.userId != null">
+                #{bean.userId},
+            </if>
+            <if test="bean.shareTitle != null">
+                #{bean.shareTitle},
+            </if>
+            <if test="bean.validType != null">
+                #{bean.validType},
+            </if>
+            <if test="bean.expireTime != null">
+                #{bean.expireTime},
+            </if>
+            <if test="bean.shareTime != null">
+                #{bean.shareTime},
+            </if>
+            <if test="bean.code != null">
+                #{bean.code},
+            </if>
+            <if test="bean.showCount != null">
+                #{bean.showCount},
+            </if>
+            <if test="bean.status != null">
+                #{bean.status},
+            </if>
+        </trim>
+    </insert>
+
+    <!-- 插入或者更新 （匹配有值的字段）-->
+    <insert id="insertOrUpdate" parameterType="com.easypan.entity.po.NoteShare">
+        INSERT INTO note_share
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bean.shareId != null">
+                share_id,
+            </if>
+            <if test="bean.noteId != null">
+                note_id,
+            </if>
+            <if test="bean.userId != null">
+                user_id,
+            </if>
+            <if test="bean.shareTitle != null">
+                share_title,
+            </if>
+            <if test="bean.validType != null">
+                valid_type,
+            </if>
+            <if test="bean.expireTime != null">
+                expire_time,
+            </if>
+            <if test="bean.shareTime != null">
+                share_time,
+            </if>
+            <if test="bean.code != null">
+                code,
+            </if>
+            <if test="bean.showCount != null">
+                show_count,
+            </if>
+            <if test="bean.status != null">
+                status,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bean.shareId != null">
+                #{bean.shareId},
+            </if>
+            <if test="bean.noteId != null">
+                #{bean.noteId},
+            </if>
+            <if test="bean.userId != null">
+                #{bean.userId},
+            </if>
+            <if test="bean.shareTitle != null">
+                #{bean.shareTitle},
+            </if>
+            <if test="bean.validType != null">
+                #{bean.validType},
+            </if>
+            <if test="bean.expireTime != null">
+                #{bean.expireTime},
+            </if>
+            <if test="bean.shareTime != null">
+                #{bean.shareTime},
+            </if>
+            <if test="bean.code != null">
+                #{bean.code},
+            </if>
+            <if test="bean.showCount != null">
+                #{bean.showCount},
+            </if>
+            <if test="bean.status != null">
+                #{bean.status},
+            </if>
+        </trim>
+        on DUPLICATE key update
+        <trim prefix="" suffix="" suffixOverrides=",">
+            <if test="bean.shareTitle != null">
+                share_title = VALUES(share_title),
+            </if>
+            <if test="bean.validType != null">
+                valid_type = VALUES(valid_type),
+            </if>
+            <if test="bean.expireTime != null">
+                expire_time = VALUES(expire_time),
+            </if>
+            <if test="bean.shareTime != null">
+                share_time = VALUES(share_time),
+            </if>
+            <if test="bean.code != null">
+                code = VALUES(code),
+            </if>
+            <if test="bean.showCount != null">
+                show_count = VALUES(show_count),
+            </if>
+            <if test="bean.status != null">
+                status = VALUES(status),
+            </if>
+        </trim>
+    </insert>
+
+    <!-- 添加 （批量插入）-->
+    <insert id="insertBatch" parameterType="com.easypan.entity.po.NoteShare">
+        INSERT INTO note_share(
+        share_id,note_id,user_id,share_title,valid_type,expire_time,share_time,code,show_count,status
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.shareId},#{item.noteId},#{item.userId},#{item.shareTitle},#{item.validType},#{item.expireTime},#{item.shareTime},#{item.code},#{item.showCount},#{item.status}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 批量新增修改 （批量插入）-->
+    <insert id="insertOrUpdateBatch" parameterType="com.easypan.entity.po.NoteShare">
+        INSERT INTO note_share(
+        share_id,note_id,user_id,share_title,valid_type,expire_time,share_time,code,show_count,status
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.shareId},#{item.noteId},#{item.userId},#{item.shareTitle},#{item.validType},#{item.expireTime},#{item.shareTime},#{item.code},#{item.showCount},#{item.status}
+            )
+        </foreach>
+        on DUPLICATE key update
+        share_id = VALUES(share_id),note_id = VALUES(note_id),user_id = VALUES(user_id),share_title = VALUES(share_title),valid_type = VALUES(valid_type),expire_time = VALUES(expire_time),share_time = VALUES(share_time),code = VALUES(code),show_count = VALUES(show_count),status = VALUES(status)
+    </insert>
+
+    <!--多条件修改-->
+    <update id="updateByParam" parameterType="com.easypan.entity.po.NoteShare">
+        UPDATE note_share
+        <set>
+            <if test="bean.shareId != null">
+                share_id = #{bean.shareId},
+            </if>
+            <if test="bean.noteId != null">
+                note_id = #{bean.noteId},
+            </if>
+            <if test="bean.userId != null">
+                user_id = #{bean.userId},
+            </if>
+            <if test="bean.shareTitle != null">
+                share_title = #{bean.shareTitle},
+            </if>
+            <if test="bean.validType != null">
+                valid_type = #{bean.validType},
+            </if>
+            <if test="bean.expireTime != null">
+                expire_time = #{bean.expireTime},
+            </if>
+            <if test="bean.shareTime != null">
+                share_time = #{bean.shareTime},
+            </if>
+            <if test="bean.code != null">
+                code = #{bean.code},
+            </if>
+            <if test="bean.showCount != null">
+                show_count = #{bean.showCount},
+            </if>
+            <if test="bean.status != null">
+                status = #{bean.status},
+            </if>
+        </set>
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+    </update>
+
+    <!--多条件删除-->
+    <delete id="deleteByParam">
+        delete from note_share
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+    </delete>
+
+    <!-- 根据ShareId修改-->
+    <update id="updateByShareId" parameterType="com.easypan.entity.po.NoteShare">
+        UPDATE note_share
+        <set>
+            <if test="bean.shareTitle != null">
+                share_title = #{bean.shareTitle},
+            </if>
+            <if test="bean.validType != null">
+                valid_type = #{bean.validType},
+            </if>
+            <if test="bean.expireTime != null">
+                expire_time = #{bean.expireTime},
+            </if>
+            <if test="bean.shareTime != null">
+                share_time = #{bean.shareTime},
+            </if>
+            <if test="bean.code != null">
+                code = #{bean.code},
+            </if>
+            <if test="bean.showCount != null">
+                show_count = #{bean.showCount},
+            </if>
+            <if test="bean.status != null">
+                status = #{bean.status},
+            </if>
+        </set>
+        where share_id=#{shareId}
+    </update>
+
+    <!-- 根据ShareId删除-->
+    <delete id="deleteByShareId">
+        delete from note_share where share_id=#{shareId}
+    </delete>
+
+    <!-- 根据ShareId获取对象-->
+    <select id="selectByShareId" resultMap="base_result_map">
+        select
+        <include refid="base_column_list"/>
+        from note_share where share_id=#{shareId}
+    </select>
+
+    <!-- 更新浏览次数-->
+    <update id="updateShowCount">
+        UPDATE note_share SET show_count = show_count + 1 
+        WHERE share_id = #{shareId}
+    </update>
+
+    <!-- 根据笔记ID和用户ID删除分享-->
+    <delete id="deleteByNoteIdAndUserId">
+        delete from note_share where note_id=#{noteId} and user_id=#{userId}
+    </delete>
+
+    <!-- 根据用户ID删除所有分享-->
+    <delete id="deleteByUserId">
+        delete from note_share where user_id=#{userId}
+    </delete>
+
+</mapper>

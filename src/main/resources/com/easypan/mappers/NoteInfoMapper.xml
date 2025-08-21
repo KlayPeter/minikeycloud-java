@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easypan.mappers.NoteInfoMapper">
+
+    <!--实体映射-->
+    <resultMap id="base_result_map" type="com.easypan.entity.po.NoteInfo">
+        <!--笔记ID-->
+        <result column="note_id" property="noteId"/>
+        <!--用户ID-->
+        <result column="user_id" property="userId"/>
+        <!--笔记标题-->
+        <result column="title" property="title"/>
+        <!--笔记内容-->
+        <result column="content" property="content"/>
+        <!--内容类型 1:markdown 2:富文本-->
+        <result column="content_type" property="contentType"/>
+        <!--创建时间-->
+        <result column="create_time" property="createTime"/>
+        <!--最后更新时间-->
+        <result column="last_update_time" property="lastUpdateTime"/>
+        <!--状态 0:删除 1:正常-->
+        <result column="status" property="status"/>
+        <!--是否公开 0:私有 1:公开-->
+        <result column="is_public" property="isPublic"/>
+        <!--查看次数-->
+        <result column="view_count" property="viewCount"/>
+        <!--分享状态-->
+        <result column="share_status" property="shareStatus"/>
+        <!--分享ID-->
+        <result column="share_id" property="shareId"/>
+        <!--分享链接-->
+        <result column="share_url" property="shareUrl"/>
+    </resultMap>
+
+    <!-- 通用查询结果列-->
+    <sql id="base_column_list">
+        ni.note_id,ni.user_id,ni.title,ni.content,ni.content_type,
+		 ni.create_time,ni.last_update_time,ni.status,ni.is_public,ni.view_count,
+		 CASE WHEN ns.share_id IS NOT NULL AND ns.status = 1 THEN 1 ELSE 0 END as share_status,
+		 ns.share_id,
+		 CASE WHEN ns.share_id IS NOT NULL THEN CONCAT('http://localhost:1024/noteShare/', ns.share_id) ELSE NULL END as share_url
+    </sql>
+
+    <sql id="base_condition_filed">
+        <if test="query.noteId != null and query.noteId!=''">
+            and ni.note_id = #{query.noteId}
+        </if>
+        <if test="query.userId != null and query.userId!=''">
+            and ni.user_id = #{query.userId}
+        </if>
+        <if test="query.title != null and query.title!=''">
+            and ni.title = #{query.title}
+        </if>
+        <if test="query.titleFuzzy != null and query.titleFuzzy!=''">
+            and ni.title like concat('%', #{query.titleFuzzy}, '%')
+        </if>
+        <if test="query.contentType != null">
+            and ni.content_type = #{query.contentType}
+        </if>
+        <if test="query.createTime != null and query.createTime!=''">
+            <![CDATA[ and  ni.create_time=str_to_date(#{query.createTime}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.createTimeStart != null and query.createTimeStart!=''">
+            <![CDATA[ and  ni.create_time>=str_to_date(#{query.createTimeStart}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.createTimeEnd != null and query.createTimeEnd!=''">
+            <![CDATA[ and  ni.create_time< date_sub(str_to_date(#{query.createTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+        </if>
+        <if test="query.lastUpdateTime != null and query.lastUpdateTime!=''">
+            <![CDATA[ and  ni.last_update_time=str_to_date(#{query.lastUpdateTime}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.lastUpdateTimeStart != null and query.lastUpdateTimeStart!=''">
+            <![CDATA[ and  ni.last_update_time>=str_to_date(#{query.lastUpdateTimeStart}, '%Y-%m-%d') ]]>
+        </if>
+        <if test="query.lastUpdateTimeEnd != null and query.lastUpdateTimeEnd!=''">
+            <![CDATA[ and  ni.last_update_time< date_sub(str_to_date(#{query.lastUpdateTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+        </if>
+        <if test="query.status != null">
+            and ni.status = #{query.status}
+        </if>
+        <if test="query.isPublic != null">
+            and ni.is_public = #{query.isPublic}
+        </if>
+        <if test="query.noteIdArray != null and query.noteIdArray.length > 0">
+            and ni.note_id in
+            <foreach collection="query.noteIdArray" item="item" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="query.excludedNoteIdArray != null and query.excludedNoteIdArray.length > 0">
+            and ni.note_id not in
+            <foreach collection="query.excludedNoteIdArray" item="item" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </sql>
+
+    <!-- 查询集合-->
+    <select id="selectList" resultMap="base_result_map">
+        SELECT
+        <include refid="base_column_list"/>
+        FROM note_info ni
+        LEFT JOIN note_share ns ON ni.note_id = ns.note_id AND ni.user_id = ns.user_id AND ns.status = 1
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+        <if test="query.orderBy!=null">
+            order by ${query.orderBy}
+        </if>
+        <if test="query.simplePage!=null">
+            limit #{query.simplePage.start},#{query.simplePage.end}
+        </if>
+    </select>
+
+    <!-- 查询数量-->
+    <select id="selectCount" resultType="java.lang.Integer">
+        SELECT count(1) FROM note_info ni
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+    </select>
+
+    <!-- 插入 （匹配有值的字段）-->
+    <insert id="insert" parameterType="com.easypan.entity.po.NoteInfo">
+        INSERT INTO note_info
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bean.noteId != null">
+                note_id,
+            </if>
+            <if test="bean.userId != null">
+                user_id,
+            </if>
+            <if test="bean.title != null">
+                title,
+            </if>
+            <if test="bean.content != null">
+                content,
+            </if>
+            <if test="bean.contentType != null">
+                content_type,
+            </if>
+            <if test="bean.createTime != null">
+                create_time,
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                last_update_time,
+            </if>
+            <if test="bean.status != null">
+                status,
+            </if>
+            <if test="bean.isPublic != null">
+                is_public,
+            </if>
+            <if test="bean.viewCount != null">
+                view_count,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bean.noteId != null">
+                #{bean.noteId},
+            </if>
+            <if test="bean.userId != null">
+                #{bean.userId},
+            </if>
+            <if test="bean.title != null">
+                #{bean.title},
+            </if>
+            <if test="bean.content != null">
+                #{bean.content},
+            </if>
+            <if test="bean.contentType != null">
+                #{bean.contentType},
+            </if>
+            <if test="bean.createTime != null">
+                #{bean.createTime},
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                #{bean.lastUpdateTime},
+            </if>
+            <if test="bean.status != null">
+                #{bean.status},
+            </if>
+            <if test="bean.isPublic != null">
+                #{bean.isPublic},
+            </if>
+            <if test="bean.viewCount != null">
+                #{bean.viewCount},
+            </if>
+        </trim>
+    </insert>
+
+    <!-- 插入或者更新 （匹配有值的字段）-->
+    <insert id="insertOrUpdate" parameterType="com.easypan.entity.po.NoteInfo">
+        INSERT INTO note_info
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bean.noteId != null">
+                note_id,
+            </if>
+            <if test="bean.userId != null">
+                user_id,
+            </if>
+            <if test="bean.title != null">
+                title,
+            </if>
+            <if test="bean.content != null">
+                content,
+            </if>
+            <if test="bean.contentType != null">
+                content_type,
+            </if>
+            <if test="bean.createTime != null">
+                create_time,
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                last_update_time,
+            </if>
+            <if test="bean.status != null">
+                status,
+            </if>
+            <if test="bean.isPublic != null">
+                is_public,
+            </if>
+            <if test="bean.viewCount != null">
+                view_count,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bean.noteId != null">
+                #{bean.noteId},
+            </if>
+            <if test="bean.userId != null">
+                #{bean.userId},
+            </if>
+            <if test="bean.title != null">
+                #{bean.title},
+            </if>
+            <if test="bean.content != null">
+                #{bean.content},
+            </if>
+            <if test="bean.contentType != null">
+                #{bean.contentType},
+            </if>
+            <if test="bean.createTime != null">
+                #{bean.createTime},
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                #{bean.lastUpdateTime},
+            </if>
+            <if test="bean.status != null">
+                #{bean.status},
+            </if>
+            <if test="bean.isPublic != null">
+                #{bean.isPublic},
+            </if>
+            <if test="bean.viewCount != null">
+                #{bean.viewCount},
+            </if>
+        </trim>
+        on DUPLICATE key update
+        <trim prefix="" suffix="" suffixOverrides=",">
+            <if test="bean.title != null">
+                title = VALUES(title),
+            </if>
+            <if test="bean.content != null">
+                content = VALUES(content),
+            </if>
+            <if test="bean.contentType != null">
+                content_type = VALUES(content_type),
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                last_update_time = VALUES(last_update_time),
+            </if>
+            <if test="bean.status != null">
+                status = VALUES(status),
+            </if>
+            <if test="bean.isPublic != null">
+                is_public = VALUES(is_public),
+            </if>
+            <if test="bean.viewCount != null">
+                view_count = VALUES(view_count),
+            </if>
+        </trim>
+    </insert>
+
+    <!-- 添加 （批量插入）-->
+    <insert id="insertBatch" parameterType="com.easypan.entity.po.NoteInfo">
+        INSERT INTO note_info(
+        note_id,user_id,title,content,content_type,create_time,last_update_time,status,is_public,view_count
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.noteId},#{item.userId},#{item.title},#{item.content},#{item.contentType},#{item.createTime},#{item.lastUpdateTime},#{item.status},#{item.isPublic},#{item.viewCount}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 批量新增修改 （批量插入）-->
+    <insert id="insertOrUpdateBatch" parameterType="com.easypan.entity.po.NoteInfo">
+        INSERT INTO note_info(
+        note_id,user_id,title,content,content_type,create_time,last_update_time,status,is_public,view_count
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.noteId},#{item.userId},#{item.title},#{item.content},#{item.contentType},#{item.createTime},#{item.lastUpdateTime},#{item.status},#{item.isPublic},#{item.viewCount}
+            )
+        </foreach>
+        on DUPLICATE key update
+        note_id = VALUES(note_id),user_id = VALUES(user_id),title = VALUES(title),content = VALUES(content),content_type = VALUES(content_type),create_time = VALUES(create_time),last_update_time = VALUES(last_update_time),status = VALUES(status),is_public = VALUES(is_public),view_count = VALUES(view_count)
+    </insert>
+
+    <!--多条件修改-->
+    <update id="updateByParam" parameterType="com.easypan.entity.po.NoteInfo">
+        UPDATE note_info
+        <set>
+            <if test="bean.noteId != null">
+                note_id = #{bean.noteId},
+            </if>
+            <if test="bean.userId != null">
+                user_id = #{bean.userId},
+            </if>
+            <if test="bean.title != null">
+                title = #{bean.title},
+            </if>
+            <if test="bean.content != null">
+                content = #{bean.content},
+            </if>
+            <if test="bean.contentType != null">
+                content_type = #{bean.contentType},
+            </if>
+            <if test="bean.createTime != null">
+                create_time = #{bean.createTime},
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                last_update_time = #{bean.lastUpdateTime},
+            </if>
+            <if test="bean.status != null">
+                status = #{bean.status},
+            </if>
+            <if test="bean.isPublic != null">
+                is_public = #{bean.isPublic},
+            </if>
+            <if test="bean.viewCount != null">
+                view_count = #{bean.viewCount},
+            </if>
+        </set>
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+    </update>
+
+    <!--多条件删除-->
+    <delete id="deleteByParam">
+        delete from note_info
+        <where>
+            <include refid="base_condition_filed"/>
+        </where>
+    </delete>
+
+    <!-- 根据NoteIdAndUserId修改-->
+    <update id="updateByNoteIdAndUserId" parameterType="com.easypan.entity.po.NoteInfo">
+        UPDATE note_info
+        <set>
+            <if test="bean.title != null">
+                title = #{bean.title},
+            </if>
+            <if test="bean.content != null">
+                content = #{bean.content},
+            </if>
+            <if test="bean.contentType != null">
+                content_type = #{bean.contentType},
+            </if>
+            <if test="bean.lastUpdateTime != null">
+                last_update_time = #{bean.lastUpdateTime},
+            </if>
+            <if test="bean.status != null">
+                status = #{bean.status},
+            </if>
+            <if test="bean.isPublic != null">
+                is_public = #{bean.isPublic},
+            </if>
+            <if test="bean.viewCount != null">
+                view_count = #{bean.viewCount},
+            </if>
+        </set>
+        where note_id=#{noteId} and user_id=#{userId}
+    </update>
+
+    <!-- 根据NoteIdAndUserId删除-->
+    <delete id="deleteByNoteIdAndUserId">
+        delete from note_info where note_id=#{noteId} and user_id=#{userId}
+    </delete>
+
+    <!-- 根据NoteIdAndUserId获取对象-->
+    <select id="selectByNoteIdAndUserId" resultMap="base_result_map">
+        select
+        <include refid="base_column_list"/>
+        from note_info ni
+        LEFT JOIN note_share ns ON ni.note_id = ns.note_id AND ni.user_id = ns.user_id AND ns.status = 1
+        where ni.note_id=#{noteId} and ni.user_id=#{userId}
+    </select>
+
+    <!-- 更新查看次数-->
+    <update id="updateViewCount">
+        UPDATE note_info SET view_count = view_count + 1 
+        WHERE note_id = #{noteId} AND user_id = #{userId}
+    </update>
+
+    <!-- 根据用户ID删除所有笔记-->
+    <delete id="deleteByUserId">
+        delete from note_info where user_id=#{userId}
+    </delete>
+
+</mapper>
