@@ -281,49 +281,88 @@ public class UserInfoServiceImpl implements UserInfoService
 
     @Override
     public SessionWebUserDto login(String email, String password) {
-        final UserInfo userInfo = this.userInfoMapper.selectByEmail(email);
-        if (userInfo == null || !userInfo
-                .getPassword()
-                .equals(password)) {
-            throw new BusinessException("账号或密码错误");
+        // 创建登录专用日志记录器
+        org.slf4j.Logger loginLogger = org.slf4j.LoggerFactory.getLogger("LOGIN");
+        
+        loginLogger.info("=== UserInfoService.login 开始 ===");
+        loginLogger.info("查询用户邮箱: {}", email);
+        
+        try {
+            // 查询用户信息
+            loginLogger.info("开始从数据库查询用户信息");
+            final UserInfo userInfo = this.userInfoMapper.selectByEmail(email);
+            
+            if (userInfo == null) {
+                loginLogger.error("用户不存在: {}", email);
+                throw new BusinessException("账号或密码错误");
+            }
+            
+            loginLogger.info("用户查询成功: userId={}, nickName={}, status={}", 
+                userInfo.getUserId(), userInfo.getNickName(), userInfo.getStatus());
+            
+            // 验证密码
+            loginLogger.info("开始验证密码");
+            if (!userInfo.getPassword().equals(password)) {
+                loginLogger.error("密码验证失败: 用户={}", email);
+                throw new BusinessException("账号或密码错误");
+            }
+            loginLogger.info("密码验证通过");
+    
+            // 检查用户状态
+            if (UserStatusEnum.DISABLE.getStatus().equals(userInfo.getStatus())) {
+                loginLogger.error("用户已被禁用: userId={}", userInfo.getUserId());
+                throw new BusinessException("账号已被禁用");
+            }
+            loginLogger.info("用户状态检查通过");
+    
+            // 更新登录时间
+            loginLogger.info("开始更新用户登录时间");
+            this.userInfoMapper.updateByUserId(UserInfo
+                    .builder()
+                    .lastLoginTime(new Date())
+                    .build(), userInfo.getUserId());
+            loginLogger.info("用户登录时间更新成功");
+    
+            // 缓存用户空间使用情况
+            loginLogger.info("开始查询用户空间使用情况");
+            final Long useSpace = fileInfoMapper.selectUseSpace(userInfo.getUserId());
+            loginLogger.info("用户空间使用情况查询成功: useSpace={}, totalSpace={}", 
+                useSpace, userInfo.getTotalSpace());
+            
+            loginLogger.info("开始保存用户空间信息到Redis");
+            redisComponent.saveUserSpaceUse(userInfo.getUserId(), UserSpaceDto
+                    // 构建UserSpaceDto
+                    .builder()
+                    // 已使用空间
+                    .useSpace(useSpace)
+                    // 总空间
+                    .totalSpace(userInfo.getTotalSpace())
+                    .build());
+            loginLogger.info("用户空间信息保存到Redis成功");
+    
+            // 检查管理员权限
+            boolean isAdmin = ArrayUtils.contains(appConfig.getAdminEmails().split(","), email);
+            loginLogger.info("管理员权限检查: isAdmin={}, adminEmails={}", isAdmin, appConfig.getAdminEmails());
+            
+            // 构建SessionWebUserDto
+            SessionWebUserDto sessionWebUserDto = SessionWebUserDto
+                    // 构建SessionWebUserDto
+                    .builder()
+                    // 用户ID
+                    .userId(userInfo.getUserId())
+                    // 昵称
+                    .nickName(userInfo.getNickName())
+                    // 是否是管理员
+                    .isAdmin(isAdmin)
+                    .build();
+            
+            loginLogger.info("=== UserInfoService.login 完成 ===");
+            return sessionWebUserDto;
         }
-
-        if (UserStatusEnum.DISABLE
-                .getStatus()
-                .equals(userInfo.getStatus())) {
-            throw new BusinessException("账号已被禁用");
+        catch (Exception e) {
+            loginLogger.error("UserInfoService.login 发生异常: {}", e.getMessage(), e);
+            throw e;
         }
-
-        // 更新登录时间
-        this.userInfoMapper.updateByUserId(UserInfo
-                .builder()
-                .lastLoginTime(new Date())
-                .build(), userInfo.getUserId());
-
-        // 缓存用户空间使用情况
-        final Long useSpace = fileInfoMapper.selectUseSpace(userInfo.getUserId());
-        redisComponent.saveUserSpaceUse(userInfo.getUserId(), UserSpaceDto
-                // 构建UserSpaceDto
-                .builder()
-                // 已使用空间
-                .useSpace(useSpace)
-                // 总空间
-                .totalSpace(userInfo.getTotalSpace())
-                .build());
-
-        // 构建SessionWebUserDto
-        return SessionWebUserDto
-                // 构建SessionWebUserDto
-                .builder()
-                // 用户ID
-                .userId(userInfo.getUserId())
-                // 昵称
-                .nickName(userInfo.getNickName())
-                // 是否是管理员
-                .isAdmin(ArrayUtils.contains(appConfig
-                        .getAdminEmails()
-                        .split(","), email))
-                .build();
     }
 
     @Override

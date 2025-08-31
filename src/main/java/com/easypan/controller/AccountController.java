@@ -173,25 +173,47 @@ public class AccountController extends ABaseController
                                     String password,
                             @VerifyParam(required = true)
                                     String checkCode) {
+        // 创建登录专用日志记录器
+        org.slf4j.Logger loginLogger = org.slf4j.LoggerFactory.getLogger("LOGIN");
+        
+        loginLogger.info("=== 开始登录流程 ===");
+        loginLogger.info("登录邮箱: {}", email);
+        loginLogger.info("验证码: {}", checkCode);
+        loginLogger.info("会话ID: {}", session.getId());
+        
         try {
             // 校验图片验证码 (临时允许测试验证码)
             String sessionCheckCode = (String) session.getAttribute(VerificationCodeConstants.CHECK_CODE_KEY);
+            loginLogger.info("会话中的验证码: {}", sessionCheckCode);
+            
             if (!checkCode.equalsIgnoreCase(sessionCheckCode) && !"test".equalsIgnoreCase(checkCode)) {
+                loginLogger.error("图片验证码校验失败: 输入={}, 会话={}", checkCode, sessionCheckCode);
                 throw new BusinessException("图片验证码错误");
             }
+            loginLogger.info("图片验证码校验通过");
 
             // 登录
+            loginLogger.info("开始调用用户服务登录方法");
             final SessionWebUserDto sessionWebUserDto = userInfoService.login(email, password);
+            loginLogger.info("用户服务登录成功，用户ID: {}, 昵称: {}", 
+                sessionWebUserDto.getUserId(), sessionWebUserDto.getNickName());
 
             // 存入session
             session.setAttribute(SessionConstants.SESSION_KEY, sessionWebUserDto);
+            loginLogger.info("用户信息已存入会话");
 
             // 返回成功
+            loginLogger.info("=== 登录流程完成 ===");
             return getSuccessResponseVO(sessionWebUserDto);
+        }
+        catch (Exception e) {
+            loginLogger.error("登录过程中发生异常: {}", e.getMessage(), e);
+            throw e;
         }
         finally {
             // 清除图片验证码
             session.removeAttribute(VerificationCodeConstants.CHECK_CODE_KEY);
+            loginLogger.info("已清除会话中的图片验证码");
         }
     }
 

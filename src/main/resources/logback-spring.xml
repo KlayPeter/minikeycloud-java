@@ -10,8 +10,11 @@
     <springProperty scope="context" name="log.root.level" source="log.root.level"/>
 
     <property name="LOG_FOLDER" value="logs"/>
-    <property name="LOG_FILE_NAME" value="easypan.log"/>
+    <property name="LOG_FILE_NAME" value="application.log"/>
+    <property name="ERROR_LOG_FILE_NAME" value="error.log"/>
+    <property name="LOGIN_LOG_FILE_NAME" value="login.log"/>
 
+    <!-- 应用日志文件 -->
     <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${log.path}/${LOG_FOLDER}/${LOG_FILE_NAME}</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -26,13 +29,68 @@
             <charset>utf-8</charset>
             <pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%p][%c][%M][%L]-> %m%n</pattern>
         </encoder>
-        <append>false</append>
+        <append>true</append>
         <prudent>false</prudent>
     </appender>
+
+    <!-- 错误日志文件 -->
+    <appender name="errorFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/${LOG_FOLDER}/${ERROR_LOG_FILE_NAME}</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.path}/${LOG_FOLDER}/${ERROR_LOG_FILE_NAME}.%d{yyyyMMdd}.%i</FileNamePattern>
+            <TimeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <MaxFileSize>20MB</MaxFileSize>
+            </TimeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>utf-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%p][%c][%M][%L]-> %m%n</pattern>
+        </encoder>
+        <append>true</append>
+    </appender>
+
+    <!-- 登录日志文件 -->
+    <appender name="loginFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/${LOG_FOLDER}/${LOGIN_LOG_FILE_NAME}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.path}/${LOG_FOLDER}/${LOGIN_LOG_FILE_NAME}.%d{yyyyMMdd}.%i</FileNamePattern>
+            <TimeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <MaxFileSize>20MB</MaxFileSize>
+            </TimeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>utf-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [LOGIN][%c][%M][%L]-> %m%n</pattern>
+        </encoder>
+        <append>true</append>
+    </appender>
+
+    <!-- 登录相关日志记录器 -->
+    <logger name="LOGIN" level="DEBUG" additivity="false">
+        <appender-ref ref="stdot"/>
+        <appender-ref ref="loginFile"/>
+    </logger>
+
+    <!-- 数据库相关日志 -->
+    <logger name="com.minikeycloud.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="stdot"/>
+        <appender-ref ref="file"/>
+    </logger>
+
+    <!-- Redis相关日志 -->
+    <logger name="org.springframework.data.redis" level="DEBUG"/>
 
     <root level="${log.root.level}">
         <appender-ref ref="stdot"/>
         <appender-ref ref="file"/>
+        <appender-ref ref="errorFile"/>
     </root>
 
 </configuration>
